@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>Hello World</h1>
+<p id=leaders_weekly></p>
+<script>
+    var info = '{{all_info | tojson}}';
+    var info_obj = JSON.parse(info);
+    // info_obj[0][0] = team id
+    // info_obj[0][1] = player id
+    // info_obj[0][2] = team name
+    // info_obj[0][3] = player score
+    // info_obj[0][4] = player name
+    // info_obj[0][5] = gameweek
+    // info_obj[0][6] = position
+    // info_obj[0][7] = subbed
+
+    function unique(value, index, self) { 
+        return self.indexOf(value) === index;
+    }
+    function ScoreLeaderPerGameweek(){
+        // function to get the team leading in score each gameweek
+        var players = []
+        var gameweek = 0;
+        var leaders = [];
+        var scores = {};
+        var gameweek_highest = "";
+        var gameweek_highest_score = 0;
+        // create dictionary with team names and placeholder value for scores
+        for (i=0; i < info_obj.length; i++){   
+        // 6 teams in the leagues and 15 players per team so I am iterating over one gameweek
+            if (!(info_obj[i][2] in scores)){
+                document.getElementById('leaders_weekly').innerHTML += info_obj[i][2]; 
+                scores[info_obj[i][2]] = 0;
+            }
+        }
+        // iterate over all rows
+        for (i=0; i < info_obj.length; i++){
+            // add the score of the current player to the team's overall score if the position of player is within the starting 11
+            if (info_obj[i][6] <= 11){
+                scores[info_obj[i][2]] += info_obj[i][3];
+            }
+            // check if the gameweek has changed
+            if ( info_obj[i][5] > gameweek ){
+                // if so make gameweek equal to the new gameweek
+                gameweek = info_obj[i][5];
+                // get the team with the current highest score and add it to list of leaders
+                for(var index in scores) {
+                    if ( scores[index] > gameweek_highest_score ){
+                        gameweek_highest_score = scores[index];
+                        gameweek_highest = index;
+                    }
+                }
+                leaders.push(gameweek_highest)
+            }
+        }
+        document.getElementById('leaders_weekly').innerHTML = leaders;
+        console.log(scores) 
+    }
+
+
+    ScoreLeaderPerGameweek()
+
+</script>
+</body>
+</html>

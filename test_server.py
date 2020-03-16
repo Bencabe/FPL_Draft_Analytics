@@ -28,8 +28,10 @@ mysql = MySQL(app)
 def index():
     cur = mysql.connection.cursor()
     cur.execute('''SELECT* FROM weekly_player_score''')
-    res = cur.fetchall()
-    return render_template('index.html',all_info=res)
+    player_scores = cur.fetchall()
+    cur.execute('''SELECT* FROM fixtures''')
+    fixtures = cur.fetchall()
+    return render_template('index.html',scores_info=player_scores,fixtures=fixtures)
 
 
 if __name__ == '__main__':

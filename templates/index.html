@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
 <body>
-<h1>Hello World</h1>
+<h1>Fantasy Football!</h1>
 <p id=leaders_weekly></p>
 <script>
-    var info = '{{all_info | tojson}}';
+    var info = '{{scores_info | tojson}}';
     var info_obj = JSON.parse(info);
+    // scores_info column information:
     // info_obj[0][0] = team id
     // info_obj[0][1] = player id
     // info_obj[0][2] = team name
@@ -15,51 +16,51 @@
     // info_obj[0][6] = position
     // info_obj[0][7] = subbed
 
+    var fixtures = '{{fixtures | tojson}}';
+    var fixtures_obj = JSON.parse(fixtures);
+    // fixtures column information:
+    // fixtures_obj[0][0] = player 1
+    // fixtures_obj[0][1] = player 2
+    // fixtures_obj[0][2] = gameweek
+
+
     function unique(value, index, self) { 
         return self.indexOf(value) === index;
     }
-    function ScoreLeaderPerGameweek(){
-        // function to get the team leading in score each gameweek
+    function scoresPerWeek(){
+        // function to get the each team's score for every gameweek
         var players = []
-        var gameweek = 0;
-        var leaders = [];
-        var scores = {};
-        var gameweek_highest = "";
-        var gameweek_highest_score = 0;
-        // create dictionary with team names and placeholder value for scores
+        var gameweek = 1;
+        var gameweek_scores = {};
+        // create object with a key for each gameweek to hold each team's score for that gameweek
         for (i=0; i < info_obj.length; i++){   
-        // 6 teams in the leagues and 15 players per team so I am iterating over one gameweek
-            if (!(info_obj[i][2] in scores)){
-                document.getElementById('leaders_weekly').innerHTML += info_obj[i][2]; 
-                scores[info_obj[i][2]] = 0;
+            if (!(info_obj[i][5] in gameweek_scores)){
+                gameweek_scores[info_obj[i][5]] = {};
             }
         }
         // iterate over all rows
         for (i=0; i < info_obj.length; i++){
-            // add the score of the current player to the team's overall score if the position of player is within the starting 11
-            if (info_obj[i][6] <= 11){
-                scores[info_obj[i][2]] += info_obj[i][3];
+            // add the score of player in current row to appropriate team and gameweek in gameweek_scores object if player is in first 11 positions
+            if (info_obj[i][6] <= 11 & !(info_obj[i][2] in gameweek_scores[info_obj[i][5]])){
+                gameweek_scores[info_obj[i][5]][info_obj[i][2]] = info_obj[i][3]
             }
-            // check if the gameweek has changed
-            if ( info_obj[i][5] > gameweek ){
-                // if so make gameweek equal to the new gameweek
-                gameweek = info_obj[i][5];
-                // get the team with the current highest score and add it to list of leaders
-                for(var index in scores) {
-                    if ( scores[index] > gameweek_highest_score ){
-                        gameweek_highest_score = scores[index];
-                        gameweek_highest = index;
-                    }
-                }
-                leaders.push(gameweek_highest)
+            else if (info_obj[i][6] <= 11 & (info_obj[i][2] in gameweek_scores[info_obj[i][5]])){
+                gameweek_scores[info_obj[i][5]][info_obj[i][2]]+= info_obj[i][3]
             }
         }
-        document.getElementById('leaders_weekly').innerHTML = leaders;
-        console.log(scores) 
+        return gameweek_scores
     }
 
 
-    ScoreLeaderPerGameweek()
+    var scores_each_week = scoresPerWeek();
+
+    function pointsPerWeek(){
+        // function to find each player's head to head points per gameweek
+        for (i = 0; i > fixtures_obj.length; i++ ){
+            document.getElementById('leaders_weekly').innerHTML += "fixtures_obj[i]";
+        }
+    }
+
 
 </script>
 </body>

@@ -70,9 +70,6 @@
             }
         }
 
-        // for (i = 1; i <= Object.keys(gameweek_scores).length; i++){
-        //     gameweek_scores[i] = {...running_total}
-        // }
 
         // iterate over the fixtures and use the scores_each_week object generated earlier to find out who won
         for (i = 0; i < fixtures_obj.length; i++ ){
@@ -88,21 +85,21 @@
                 scores_each_week[fixtures_obj[i][2]][fixtures_obj[i][0]] < scores_each_week[fixtures_obj[i][2]][fixtures_obj[i][1]]){
                 running_total[fixtures_obj[i][1]] += 3;
             }
-            // if neither true it must be a draw to give both players a point
+            // if neither true it must be a draw so give both players 1 point
             else if (fixtures_obj[i][2] < 30){
                 running_total[fixtures_obj[i][0]] += 1;
                 running_total[fixtures_obj[i][1]] += 1;
 
             }
             if (fixtures_obj[i][2] < 30){
-                gameweek_scores[fixtures_obj[i][2]] = {...running_total}
+                gameweek_scores[fixtures_obj[i][2]] = {...running_total};
             }
 
        }
-        console.log(gameweek_scores)
+        return gameweek_scores;
     }
 
-    pointsPerWeek();
+    var h2hScores = pointsPerWeek();
 
 
 </script>

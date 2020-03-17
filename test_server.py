@@ -29,7 +29,7 @@ def index():
     cur = mysql.connection.cursor()
     cur.execute('''SELECT* FROM weekly_player_score''')
     player_scores = cur.fetchall()
-    cur.execute('''SELECT* FROM fixtures''')
+    cur.execute('''SELECT* FROM fixtures ORDER BY gameweek''')
     fixtures = cur.fetchall()
     return render_template('index.html',scores_info=player_scores,fixtures=fixtures)
 

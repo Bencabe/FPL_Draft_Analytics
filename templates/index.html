@@ -1,8 +1,17 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    </head>
+    <style>
+        h1 {
+            text-align: center;
+        }
+    </style>
 <body>
-<h1>Fantasy Football!</h1>
+<h1>Fantasy Football Analytics</h1>
 <p id=leaders_weekly></p>
+<canvas id="myChart" width="800" height="400"></canvas>
 <script>
     var info = '{{scores_info | tojson}}';
     var info_obj = JSON.parse(info);
@@ -24,9 +33,6 @@
     // fixtures_obj[0][2] = gameweek
 
 
-    function unique(value, index, self) { 
-        return self.indexOf(value) === index;
-    }
     function scoresPerWeek(){
         // function to get the each team's score for every gameweek
         var players = []
@@ -51,11 +57,13 @@
         return gameweek_scores
     }
 
+    
 
     var scores_each_week = scoresPerWeek();
 
     function pointsPerWeek(){
         // function to find each player's head to head points per gameweek
+        // requires object detailing the score of each player per week created earlier
         gameweek_scores = {}
         running_total = {}
         gameweek = 1
@@ -99,7 +107,72 @@
         return gameweek_scores;
     }
 
-    var h2hScores = pointsPerWeek();
+    var h2hPoints = pointsPerWeek();
+
+    function numWeeksLeading(){ 
+        // function to return a bar graph showing the number of weeks that each team has been leading for
+        // requires object detailing the score of each team per week and object detailing the h2h points of each team per week
+        // these objects have already been created in this script, I will use the global variables instead of passing them into the function
+
+        // labels along the x-axis using one week of the h2hScores object created eariler
+        var teams = Object.keys(h2hPoints[1]);
+        // data for the y-axis
+        var weeksLeading = [];
+
+        // making a copy of the h2hPoints object.
+        // I will add the scores of each player divided by 10000 to the points each week to account for score difference
+        // this will allow me to know the leader in weeks where the h2h points are the same
+        var totalScores = {... h2hPoints}
+
+        // create variable to hold the running total of scores to add to h2h points each week
+        var runningTotal = {}
+        teams.forEach(element => runningTotal[element] = 0);
+
+        // creating the running total divided by 10000 to add to the h2h points each week to find out who was on top that week
+        for(i=1;i<=Object.keys(scores_each_week).length;i++){
+            Object.keys(scores_each_week[i]).forEach(element => runningTotal[element] += (scores_each_week[i][element] / 10000))
+            Object.keys(runningTotal).forEach(element => totalScores[i][element] += runningTotal[element])
+        }
+        
+        // iterating over totalScores to see who was leading each week
+        var weeksLeadingObj = {}
+        teams.forEach(element => weeksLeadingObj[element] = 0);
+        for (i=1;i<=Object.keys(totalScores).length;i++){
+            highest = 0;
+            leader = "";
+            for (j=0;j<Object.keys(totalScores[i]).length;j++){
+                var team_name = Object.keys(totalScores[i])[j]
+                if (totalScores[i][team_name]> highest){
+                    highest = totalScores[i][team_name];
+                    leader = team_name;
+                }
+            }
+            weeksLeadingObj[leader] += 1
+        }
+
+        Object.keys(weeksLeadingObj).forEach(element => weeksLeading.push(weeksLeadingObj[element]))
+
+
+        var ctx = document.getElementById("myChart");
+        var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: teams,
+            datasets: [
+            { 
+                label: 'Number of weeks at the top of the league',
+                data: weeksLeading,
+                backgroundColor: 'rgba(200, 229, 250, 0.6)',
+            }
+            
+            ]
+        }
+        });
+        console.log(totalScores)
+        return myChart
+    }
+    numWeeksLeading()
+
 
 
 </script>

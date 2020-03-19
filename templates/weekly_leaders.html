@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    </head>
+    <style>
+        h1 {
+            text-align: center;
+        }
+
+        #gameweekSelection{
+            margin-top: 50px;
+        }
+        #gameweekSelection h3{
+            text-align: center;
+        }
+
+        #tableContainer{
+            width:98%; 
+            margin:1%;
+        }
+
+        table {
+            width: 600px;
+            margin-left:auto; 
+            margin-right:auto; 
+
+
+        }
+
+        th {
+            height: 50px;
+        }
+
+        td {
+            height: 30px;
+            text-align: center;
+        }
+
+        th, td {
+            border: 1px solid black;
+        }
+
+        
+    </style>
+<body>
+<h1>Fantasy Football Analytics</h1>
+<div>
+    <canvas id="myChart" width="800" height="400"></canvas>
+</div>
+<div id="gameweekSelection">
+    <h3> League Table Per Gameweek </h3>
+    <label>Choose a gameweek: </label>
+    <select id="gameweekDropdown"></select>
+    <button id = "submit" onclick="createGameweekTable()">Submit</button>
+</div>
+<div id = 'tableContainer'>
+    <table id = 'gameweekTable'></table>
+</div>
+<script>
+    var info = '{{scores_info | tojson}}';
+    var info_obj = JSON.parse(info);
+    // scores_info object information:
+    // info_obj[0][0] = team id
+    // info_obj[0][1] = player id
+    // info_obj[0][2] = team name
+    // info_obj[0][3] = player score
+    // info_obj[0][4] = player name
+    // info_obj[0][5] = gameweek
+    // info_obj[0][6] = position
+    // info_obj[0][7] = subbed
+
+    var fixtures = '{{fixtures | tojson}}';
+    var fixtures_obj = JSON.parse(fixtures);
+    // fixtures object information:
+    // fixtures_obj[0][0] = player 1
+    // fixtures_obj[0][1] = player 2
+    // fixtures_obj[0][2] = gameweek
+
+
+    function scoresPerWeek(){
+        // function to get the each team's score for every gameweek
+        var players = []
+        var gameweek = 1;
+        var gameweek_scores = {};
+        // create object with a key for each gameweek to hold each team's score for that gameweek
+        for (i=0; i < info_obj.length; i++){   
+            if (!(info_obj[i][5] in gameweek_scores)){
+                gameweek_scores[info_obj[i][5]] = {};
+            }
+        }
+        // iterate over all rows
+        for (i=0; i < info_obj.length; i++){
+            // add the score of player in current row to appropriate team and gameweek in gameweek_scores object if player is in first 11 positions
+            if (info_obj[i][6] <= 11 & !(info_obj[i][2] in gameweek_scores[info_obj[i][5]])){
+                gameweek_scores[info_obj[i][5]][info_obj[i][2]] = info_obj[i][3]
+            }
+            else if (info_obj[i][6] <= 11 & (info_obj[i][2] in gameweek_scores[info_obj[i][5]])){
+                gameweek_scores[info_obj[i][5]][info_obj[i][2]]+= info_obj[i][3]
+            }
+        }
+        return gameweek_scores
+    }
+
+    
+
+    var scores_each_week = scoresPerWeek();
+
+    function pointsPerWeek(){
+        // function to find each player's head to head points per gameweek
+        // requires object detailing the score of each player per week created earlier
+        gameweek_scores = {}
+        running_total = {}
+        gameweek = 1
+        // create object with a key for each gameweek to hold each team's h2h score for that gameweek
+        // also creating an object to hold the running total 
+        for (i=0; i < info_obj.length; i++){   
+            if (!(info_obj[i][5] in gameweek_scores)){
+                gameweek_scores[info_obj[i][5]] = {};
+            }
+            if (!(info_obj[i][2] in running_total)){
+                running_total[info_obj[i][2]] = 0;
+            }
+        }
+
+
+        // iterate over the fixtures and use the scores_each_week object generated earlier to find out who won
+        for (i = 0; i < fixtures_obj.length; i++ ){
+            // consfusing line but it is checking if player 1 had a higher score that player 2 that gameweek in each row of fixtures table
+            // also making sure we are only checking for rows where gameweek has been played. using logical && to break if not
+            if (fixtures_obj[i][2] < 30 &&
+                scores_each_week[fixtures_obj[i][2]][fixtures_obj[i][0]] > scores_each_week[fixtures_obj[i][2]][fixtures_obj[i][1]]){
+                // if so we will give player_1 3 points
+                running_total[fixtures_obj[i][0]] += 3;
+            }
+            // if player_2 has higher score than player_1 give player_2 3 points
+            else if(fixtures_obj[i][2] < 30 &&
+                scores_each_week[fixtures_obj[i][2]][fixtures_obj[i][0]] < scores_each_week[fixtures_obj[i][2]][fixtures_obj[i][1]]){
+                running_total[fixtures_obj[i][1]] += 3;
+            }
+            // if neither true it must be a draw so give both players 1 point
+            else if (fixtures_obj[i][2] < 30){
+                running_total[fixtures_obj[i][0]] += 1;
+                running_total[fixtures_obj[i][1]] += 1;
+
+            }
+            if (fixtures_obj[i][2] < 30){
+                gameweek_scores[fixtures_obj[i][2]] = {...running_total};
+            }
+
+       }
+        return gameweek_scores;
+    }
+
+    var h2hPoints = pointsPerWeek();
+
+    function totScoreWeekly(){ 
+        // function to return an object showing the h2h points of each team plus the score divided by 10000 each week
+        // requires object detailing the score of each team per week and object detailing the h2h points of each team per week
+        // these objects have already been created in this script, I will use the global variables instead of passing them into the function
+
+        // labels along the x-axis using one week of the h2hScores object created eariler
+        var teams = Object.keys(h2hPoints[1]);
+        // data for the y-axis
+        var weeksLeading = [];
+
+        // making a copy of the h2hPoints object.
+        // I will add the scores of each player divided by 10000 to the points each week to account for score difference
+        // this will allow me to know the leader in weeks where the h2h points are the same
+        var totalScores = {... h2hPoints}
+
+        // create variable to hold the running total of scores to add to h2h points each week
+        var runningTotal = {}
+        teams.forEach(element => runningTotal[element] = 0);
+
+        // creating the running total divided by 10000 to add to the h2h points each week to find out who was on top that week
+        for(i=1;i<=Object.keys(scores_each_week).length;i++){
+            Object.keys(scores_each_week[i]).forEach(element => runningTotal[element] += (scores_each_week[i][element] / 10000))
+            Object.keys(runningTotal).forEach(element => totalScores[i][element] += runningTotal[element])
+        }
+        return totalScores
+    }
+    var totalScores = totScoreWeekly()
+
+        function barChartLeaders() {
+        // function to return a bar graph showing the number of weeks each team has led the league for        
+        // iterating over totalScores to see who was leading each week
+        // labels along the x-axis using one week of the h2hScores object created eariler
+        var teams = Object.keys(h2hPoints[1]);
+        // data for the y-axis
+        var weeksLeading = [];
+        var weeksLeadingObj = {}
+        teams.forEach(element => weeksLeadingObj[element] = 0);
+        for (i=1;i<=Object.keys(totalScores).length;i++){
+            highest = 0;
+            leader = "";
+            for (j=0;j<Object.keys(totalScores[i]).length;j++){
+                var team_name = Object.keys(totalScores[i])[j]
+                if (totalScores[i][team_name]> highest){
+                    highest = totalScores[i][team_name];
+                    leader = team_name;
+                }
+            }
+            weeksLeadingObj[leader] += 1
+        }
+
+        Object.keys(weeksLeadingObj).forEach(element => weeksLeading.push(weeksLeadingObj[element]))
+
+
+        var ctx = document.getElementById("myChart");
+        var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: teams,
+            datasets: [
+            { 
+                label: 'Number of weeks at the top of the league',
+                data: weeksLeading,
+                backgroundColor: 'rgba(200, 229, 250, 0.6)',
+            }
+            
+            ]
+        }
+        });
+        return myChart
+    }
+    barChartLeaders()
+
+    // populate gameweek dropdown menu
+    for (i=1; i<=Object.keys(totalScores).length;i++){
+        document.getElementById('gameweekDropdown').innerHTML += '<option> Gameweek ' + i + '</option>';
+    }
+
+    function createGameweekTable(){
+        var val = document.getElementById('gameweekDropdown');
+        gameweek = val.value.split(" ")[1];
+        var gameweekResults = totalScores[gameweek];
+        console.log(gameweekResults)
+        var sortedGameweek = [];
+        for (var player in gameweekResults) {
+            sortedGameweek.push([player, gameweekResults[player]]);
+        }
+
+        sortedGameweek.sort(function(b, a) {
+            return a[1] - b[1];
+        });
+        document.getElementById('gameweekTable').innerHTML = ''
+        document.getElementById('gameweekTable').innerHTML += '<tr> <th>Player</th> <th> H2H Points </th> <th> Total Score</th> </tr> ';
+
+        for (var player in sortedGameweek){
+            var points = sortedGameweek[player][1]
+            var h2hPoints = points.toString().split('.')[0]
+            var str_score = points.toString().split('.')[1]
+            var int_score = parseInt(parseFloat('.'+str_score) * 10000)
+            document.getElementById('gameweekTable').innerHTML += 
+            '<tr> <td>'+ sortedGameweek[player][0] +'</td>'+ '<td>'+ h2hPoints +'</td>'+ '<td>'+ int_score +'</td> </tr>';
+        }
+
+
+    }
+
+
+
+</script>
+</body>
+</html>

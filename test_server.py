@@ -9,18 +9,7 @@ app.config['MYSQL_PASSWORD'] = 'password'
 app.config['MYSQL_DB'] = 'fantasy_football'
 
 mysql = MySQL(app)
-# cur = mysql.connection.cursor()
-# cur.execute('''SELECT* FROM weekly_player_score''')
-# res = cur.fetchall()
 
-
-# def leaders_per_week(result):
-#     # function to return leader each week
-#     leader = []
-#     teams = []
-#     for row in result:
-#         print("yes")
-#     return "placeholder"
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -32,6 +21,16 @@ def index():
     cur.execute('''SELECT* FROM fixtures ORDER BY gameweek''')
     fixtures = cur.fetchall()
     return render_template('index.html',scores_info=player_scores,fixtures=fixtures)
+
+@app.route('/weekly_leaders', methods=['GET', 'POST'])
+
+def weekly_leaders():
+    cur = mysql.connection.cursor()
+    cur.execute('''SELECT* FROM weekly_player_score''')
+    player_scores = cur.fetchall()
+    cur.execute('''SELECT* FROM fixtures ORDER BY gameweek''')
+    fixtures = cur.fetchall()
+    return render_template('weekly_leaders.html',scores_info=player_scores,fixtures=fixtures)
 
 
 if __name__ == '__main__':

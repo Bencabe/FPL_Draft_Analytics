@@ -7,11 +7,56 @@
         h1 {
             text-align: center;
         }
+
+        #gameweekSelection{
+            margin-top: 50px;
+        }
+        #gameweekSelection h3{
+            text-align: center;
+        }
+
+        #tableContainer{
+            width:98%; 
+            margin:1%;
+        }
+
+        table {
+            width: 600px;
+            margin-left:auto; 
+            margin-right:auto; 
+
+
+        }
+
+        th {
+            height: 50px;
+        }
+
+        td {
+            height: 30px;
+            text-align: center;
+        }
+
+        th, td {
+            border: 1px solid black;
+        }
+
+        
     </style>
 <body>
 <h1>Fantasy Football Analytics</h1>
-<p id=leaders_weekly></p>
-<canvas id="myChart" width="800" height="400"></canvas>
+<div>
+    <canvas id="myChart" width="800" height="400"></canvas>
+</div>
+<div id="gameweekSelection">
+    <h3> League Table Per Gameweek </h3>
+    <label>Choose a gameweek: </label>
+    <select id="gameweekDropdown"></select>
+    <button id = "submit" onclick="createGameweekTable()">Submit</button>
+</div>
+<div id = 'tableContainer'>
+    <table id = 'gameweekTable'></table>
+</div>
 <script>
     var info = '{{scores_info | tojson}}';
     var info_obj = JSON.parse(info);
@@ -109,8 +154,8 @@
 
     var h2hPoints = pointsPerWeek();
 
-    function numWeeksLeading(){ 
-        // function to return a bar graph showing the number of weeks that each team has been leading for
+    function totScoreWeekly(){ 
+        // function to return an object showing the h2h points of each team plus the score divided by 10000 each week
         // requires object detailing the score of each team per week and object detailing the h2h points of each team per week
         // these objects have already been created in this script, I will use the global variables instead of passing them into the function
 
@@ -133,8 +178,17 @@
             Object.keys(scores_each_week[i]).forEach(element => runningTotal[element] += (scores_each_week[i][element] / 10000))
             Object.keys(runningTotal).forEach(element => totalScores[i][element] += runningTotal[element])
         }
-        
+        return totalScores
+    }
+    var totalScores = totScoreWeekly()
+
+        function barChartLeaders() {
+        // function to return a bar graph showing the number of weeks each team has led the league for        
         // iterating over totalScores to see who was leading each week
+        // labels along the x-axis using one week of the h2hScores object created eariler
+        var teams = Object.keys(h2hPoints[1]);
+        // data for the y-axis
+        var weeksLeading = [];
         var weeksLeadingObj = {}
         teams.forEach(element => weeksLeadingObj[element] = 0);
         for (i=1;i<=Object.keys(totalScores).length;i++){
@@ -168,10 +222,42 @@
             ]
         }
         });
-        console.log(totalScores)
         return myChart
     }
-    numWeeksLeading()
+    barChartLeaders()
+
+    // populate gameweek dropdown menu
+    for (i=1; i<=Object.keys(totalScores).length;i++){
+        document.getElementById('gameweekDropdown').innerHTML += '<option> Gameweek ' + i + '</option>';
+    }
+
+    function createGameweekTable(){
+        var val = document.getElementById('gameweekDropdown');
+        gameweek = val.value.split(" ")[1];
+        var gameweekResults = totalScores[gameweek];
+        console.log(gameweekResults)
+        var sortedGameweek = [];
+        for (var player in gameweekResults) {
+            sortedGameweek.push([player, gameweekResults[player]]);
+        }
+
+        sortedGameweek.sort(function(b, a) {
+            return a[1] - b[1];
+        });
+        document.getElementById('gameweekTable').innerHTML = ''
+        document.getElementById('gameweekTable').innerHTML += '<tr> <th>Player</th> <th> H2H Points </th> <th> Total Score</th> </tr> ';
+
+        for (var player in sortedGameweek){
+            var points = sortedGameweek[player][1]
+            var h2hPoints = points.toString().split('.')[0]
+            var str_score = points.toString().split('.')[1]
+            var int_score = parseInt(parseFloat('.'+str_score) * 10000)
+            document.getElementById('gameweekTable').innerHTML += 
+            '<tr> <td>'+ sortedGameweek[player][0] +'</td>'+ '<td>'+ h2hPoints +'</td>'+ '<td>'+ int_score +'</td> </tr>';
+        }
+
+
+    }
 
 
 
